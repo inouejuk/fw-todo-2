@@ -2,11 +2,14 @@ package com.example.todoapp;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import jakarta.validation.Valid;
 
 @Controller
 public class HomeController {
@@ -36,7 +39,10 @@ public class HomeController {
     }
 
     @PostMapping("/todos/confirm")
-    public String confirmCreate(@ModelAttribute("todo") Todo todo) {
+    public String confirmCreate(@Valid @ModelAttribute("todo") Todo todo, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return "create";
+        }
         return "create-confirm";
     }
 
@@ -65,8 +71,12 @@ public class HomeController {
     }
 
     @PostMapping("/todos/{id}/confirm")
-    public String confirmEdit(@PathVariable("id") Long id, @ModelAttribute("todo") Todo todo, Model model) {
+    public String confirmEdit(@PathVariable("id") Long id, @Valid @ModelAttribute("todo") Todo todo,
+            BindingResult bindingResult, Model model) {
         model.addAttribute("id", id);
+        if (bindingResult.hasErrors()) {
+            return "edit";
+        }
         return "edit-confirm";
     }
 
@@ -81,6 +91,24 @@ public class HomeController {
         todo.setId(id);
         todoMapper.update(todo);
         redirectAttributes.addFlashAttribute("message", "保存しました");
+        return "redirect:/todos";
+    }
+
+    @GetMapping("/todos/{id}/delete")
+    public String deleteForm(@PathVariable("id") Long id, Model model, RedirectAttributes redirectAttributes) {
+        Todo todo = todoMapper.findById(id);
+        if (todo == null) {
+            redirectAttributes.addFlashAttribute("message", "見つかりませんでした");
+            return "redirect:/todos";
+        }
+        model.addAttribute("todo", todo);
+        return "delete";
+    }
+
+    @PostMapping("/todos/{id}/delete")
+    public String delete(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
+        todoMapper.deleteById(id);
+        redirectAttributes.addFlashAttribute("message", "削除しました");
         return "redirect:/todos";
     }
 }
